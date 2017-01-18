@@ -29,6 +29,12 @@ func TestReadFile(t *testing.T) {
 		t.Error("error")
 		return
 	}
+	bys3, err := ReadFileAsUtf8("../gbk2.txt")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(string(bys3))
 	//
 	//test unknow
 	// os.Remove("unknow.txt")

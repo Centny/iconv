@@ -10,8 +10,9 @@ import (
 )
 
 //ReadFileAs read file as special encoding
-func ReadFileAs(filename, encoding string) ([]byte, error) {
-	bys, err := ioutil.ReadFile(filename)
+func ReadFileAs(filename, encoding string, try ...string) (res []byte, err error) {
+	var bys []byte
+	bys, err = ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -22,21 +23,28 @@ func ReadFileAs(filename, encoding string) ([]byte, error) {
 		return nil, fmt.Errorf("chardet handle return code(%v)", code)
 	}
 	coding := det.End()
-	if len(coding) < 1 {
-		return nil, fmt.Errorf("uchardet det encoding fail")
+	var trylist []string
+	if len(coding) > 0 {
+		trylist = []string{coding}
+	} else {
+		trylist = try
 	}
-	if coding == encoding {
-		return bys, nil
+	var enc *iconv.ICONV
+	for _, code := range trylist {
+		enc, err = iconv.NewICONV(code, encoding)
+		if err != nil {
+			continue
+		}
+		res, err = enc.ConvertAll(bys)
+		enc.Release()
+		if err == nil {
+			return
+		}
 	}
-	enc, err := iconv.NewICONV(coding, encoding)
-	if err != nil {
-		return nil, fmt.Errorf("create iconv by from(%v),to(%v) fail with %v", coding, encoding, err)
-	}
-	defer enc.Release()
-	return enc.ConvertAll(bys)
+	return nil, fmt.Errorf("try convert from %v to %v fail", trylist, encoding)
 }
 
 //ReadFileAsUtf8 read file and convert data to utf8
 func ReadFileAsUtf8(filename string) ([]byte, error) {
-	return ReadFileAs(filename, "UTF-8")
+	return ReadFileAs(filename, "UTF-8", "GBK", "UTF-8")
 }
